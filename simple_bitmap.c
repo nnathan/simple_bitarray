@@ -22,7 +22,7 @@ typedef unsigned int bitarray_word;
 #define BITARRAY_LIMB(bitarray, n_bit) \
     ((bitarray)[1 + ((n_bit) / BITARRAY_LIMB_BITS)].limb)
 
-/* index the limb at bit position n */
+/* build mask to select bit in limb */
 #define BITARRAY_LIMBBIT(n_bit) \
     ((1UL << ((n_bit) % BITARRAY_LIMB_BITS)))
 
@@ -39,7 +39,7 @@ typedef union
  * }
  */
 #define BITARRAY_DECLARE(name, nbits) \
-    bitarray (name)[1 + BITARRAY_NUM_BITS_TO_LIMBS(nbits)] = { nbits, 0 };
+    bitarray (name)[1 + BITARRAY_NUM_BITS_TO_LIMBS(nbits)] = { nbits, 0 }
 
 static inline size_t bitarray_num_limbs(bitarray *bitarray)
 {
@@ -76,6 +76,7 @@ static inline void bitarray_print_base16(bitarray *bitarray)
     bitarray_word i;
     size_t num_limbs = bitarray_num_limbs(bitarray);
 
+    printf("sizeof(limb)=%lu\n", sizeof(bitarray[0].limb));
     printf("num_limbs=%lu\n", num_limbs);
     for (i = 0; i <= num_limbs; i++)
     {
@@ -95,7 +96,6 @@ static inline void bitarray_print_base16(bitarray *bitarray)
     }
 
     printf("\n");
-    printf("sizeof(limb)=%lu\n", sizeof(bitarray[0].limb));
 }
 
 int main(int argc, char **argv)

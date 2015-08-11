@@ -1,3 +1,9 @@
+/*
+ * Usage:
+ *
+ */
+
+
 #ifndef SIMPLE_BITARRAY_H
 #define SIMPLE_BITARRAY_H
 
@@ -10,15 +16,11 @@
 #define inline
 #endif
 
-
-/* compile time assertions used to perform sanity checks */
-#define CASSERT(predicate, file) _impl_CASSERT_LINE(predicate, __LINE__, file)
-#define _impl_PASTE(a, b) a##b
-#define _impl_CASSERT_LINE(predicate, line, file) \
-    typedef char _impl_PASTE(assertion_failed_in_##file##_on_line_, line)[2*!!(predicate)-1]
-
-CASSERT(1 == 2, simple_bitarray_h);
-
+/*
+ * No weird architectures which means your platform must have:
+ *   - CHAR_BIT == 8
+ *   - UINT_MAX == (1<<(sizeof(bitarray_word) * CHAR_BIT)-1)
+ */
 typedef unsigned int bitarray_word;
 
 /*
@@ -67,22 +69,22 @@ static inline size_t bitarray_num_bits(bitarray *bitarray)
     return bitarray[0].limb;
 }
 
-static inline void bitarray_set_bit(bitarray *bitarray, bitarray_word n)
+static inline void bitarray_set_bit(bitarray *bitarray, size_t n)
 {
     BITARRAY_LIMB(bitarray, n) |= BITARRAY_LIMBBIT(n);
 }
 
-static inline void bitarray_clear_bit(bitarray *bitarray, bitarray_word n)
+static inline void bitarray_clear_bit(bitarray *bitarray, size_t n)
 {
     BITARRAY_LIMB(bitarray, n) &= ~BITARRAY_LIMBBIT(n);
 }
 
-static inline void bitarray_change_bit(bitarray *bitarray, bitarray_word n)
+static inline void bitarray_change_bit(bitarray *bitarray, size_t n)
 {
     BITARRAY_LIMB(bitarray, n) ^= BITARRAY_LIMBBIT(n);
 }
 
-static inline int bitarray_test_bit(const bitarray *bitarray, bitarray_word n)
+static inline int bitarray_test_bit(const bitarray *bitarray, size_t n)
 {
     return !!(BITARRAY_LIMB(bitarray, n) & BITARRAY_LIMBBIT(n));
 }
@@ -90,6 +92,7 @@ static inline int bitarray_test_bit(const bitarray *bitarray, bitarray_word n)
 static inline void bitarray_zero(bitarray *bitarray)
 {
     size_t n_bytes = sizeof(bitarray_word) * bitarray_num_limbs(bitarray);
+    printf("n_bytes = %lu\n", n_bytes);
     memset(&bitarray[1], 0, n_bytes);
 }
 
@@ -135,7 +138,7 @@ static inline void bitarray_clear_bits(bitarray *bitarray, size_t nbits)
 /*
  * Allocation functions
  */
-static inline bitarray *bitarray_alloc(unsigned long nbits)
+static inline bitarray *bitarray_alloc(size_t nbits)
 {
         bitarray *ba = NULL;
 
@@ -150,7 +153,7 @@ static inline bitarray *bitarray_alloc(unsigned long nbits)
         return ba;
 }
 
-static inline bitarray *bitarray_calloc(unsigned long nbits)
+static inline bitarray *bitarray_calloc(size_t nbits)
 {
         bitarray *ba = NULL;
 
@@ -184,20 +187,22 @@ static inline void bitarray_free(bitarray *bitarray)
 static inline bitarray *bitarray_buf_init(void *buf, size_t buf_size)
 {
     bitarray *ba = buf;
+    size_t nlimbs;
+    size_t nbits;
+
     printf("buf_size = %lu\n", buf_size);
 
     /* clamp to the number of limbs truncating excess bytes */
-    size_t nlimbs = buf_size / sizeof(bitarray_word);
+    nlimbs = buf_size / sizeof(bitarray_word);
     printf("nlimbs = %lu\n", nlimbs);
-
-    /* reserve a limb for storing number of bits */
-    size_t nbits = (nlimbs - 1) * sizeof(bitarray_word) * CHAR_BIT;
-    printf("nbits = %lu\n", nbits);
-
     if (nlimbs < 1)
     {
         return NULL;
     }
+
+    /* reserve a limb for storing number of bits */
+    nbits = (buf_size - sizeof(bitarray)) * CHAR_BIT;
+    printf("nbits = %lu\n", nbits);
 
     if (ba)
     {
@@ -218,20 +223,20 @@ static inline void bitarray_print_base16(bitarray *bitarray)
     printf("num_limbs=%lu\n", num_limbs);
     for (i = 0; i <= num_limbs; i++)
     {
-            unsigned char c;
-            unsigned int j;
-            size_t limb_size = sizeof(bitarray_word);
-
-            for (j = 0; j < limb_size; j++)
-            {
-                /* mask the byte we want to print in hex */
-                unsigned long mask = (0xFFUL) << (j * CHAR_BIT);
-                c = (unsigned char) ((bitarray[i].limb & mask) >> (j * CHAR_BIT));
-                printf("%02x", c);
-            }
-
-            printf(" ");
+        unsigned char c;
+        unsigned int j;
+        size_t limb_size = sizeof(bitarray_word);
+        
+        for (j = 0; j < limb_size; j++)
+        {
+            /* mask the byte we want to print in hex */
+            unsigned long mask = (0xFFUL) << (j * CHAR_BIT);
+            c = (unsigned char) ((bitarray[i].limb & mask) >> (j * CHAR_BIT));
+            printf("%02x", c);
         }
+        
+        printf(" ");
+    }
 
     printf("\n");
 }
